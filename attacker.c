@@ -112,8 +112,8 @@ void startTerminal(int port, char host[80])
 	}
 	
 	/* Print out results */
-	printf("%s", lua_tostring(L, -1));
-	printf("%s", lua_tostring(L, -1));
+	//printf("%s", lua_tostring(L, 2));
+	//printf("%s", lua_tostring(L, 2));
 	
 	prompt(L);
 	
@@ -142,11 +142,11 @@ void prompt(lua_State *L)
 			if(!lua_isfunction(L, -1)) {
 				lua_pop(L, 1);
 				lfatal(L, "lua_isfunction() failed");
-			}
-			
+			};
+		
 			lua_pushstring(L, cmd);
 			
-			if(lua_pcall(L, 2, 2, 0)) {
+			if(lua_pcall(L, 1, 1, 0)) {
 				lfatal(L, "lua_pcall() failed");
 			}
 		}

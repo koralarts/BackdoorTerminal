@@ -6,19 +6,20 @@ tcpsock = assert(socket.tcp())
 
 -- Connect Function
 function connect(cip, cport)
-	print("connecting... \nIP: " .. cip .. "\nPort: " .. cport .. "\n") 
+	print("Connecting... \nIP: " .. cip .. "\nPort: " .. cport) 
 	assert(tcpsock:connect(cip, cport))
-	print("connected!\n");
+	print("Connection established!\n");
 end
 
 -- Receive Response Function
 function recvResponse()
 	local data, stat, part = tcpsock:receive()
+	print("Receving...")
+	print(data)
 end
 
 -- Send Command Function
 function sendCommand(ccmd)
-	print(ccmd)
 	tcpsock:send(ccmd)
 	recvResponse()
 end
