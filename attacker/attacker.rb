@@ -29,6 +29,8 @@ raise "Must run as root or `sudo ruby #{$0}`" unless Process.uid == 0
 udp = UDPSocket.new
 dis = Dispatch.new
 
+udp.connect(opts[:host], opts[:cport])
+
 while 1 do
 	print "> "
 	cmd = gets.chomp
