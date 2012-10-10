@@ -47,7 +47,7 @@ port = options[:port]? options[:port] : 8000
 # List in order of preference, as we'll choose the first one that is running on the machine. If none
 # are found, the first process name will be used - list wisely.
 covers = ['bash','mdworker','Xorg','kthreadd','gnome-terminal']
-top = `top -l 1`
+top = `top -n 1`
 
 # If none of the processes are found running, we'll just go with the first one
 $0 = covers[0]
