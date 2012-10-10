@@ -80,7 +80,7 @@ while 1 do
 		print "Data transfer complete!\n"
 	else # Normal commands
 		data = dis.encrypt(cmd)
-		udp.send(data, 0, opts[:host], opts[:fport])
+		udp.send(data, 0)
 		
 		#TODO:
 		#	Fix receiving end
