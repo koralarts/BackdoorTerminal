@@ -3,8 +3,8 @@
 require 'optparse'
 require 'rubygems'
 require 'pcaplet'
+require '../lib/packetfu.rb'
 require 'thread'
-require 'packetfu'
 require './dispatch.rb'
 include Pcap
 
@@ -74,7 +74,7 @@ end
 # ---------------------------------------------------------
 
 cap = Pcap::Capture.open_live(dev)
-cap.setfilter('udp src port ' + port)
+cap.setfilter('udp dst port ' + port.to_s)
 
 cap.loop do |pkt|
 	attacker_ip = pkt.ip_src.to_s;
