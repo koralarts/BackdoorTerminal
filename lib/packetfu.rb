@@ -44,7 +44,7 @@ module PacketFu
 		rescue LoadError
 			return false
 		end
-		#@pcaprub_loaded = true 
+		@pcaprub_loaded = true 
 	end
 
 	pcaprub_platform_require

