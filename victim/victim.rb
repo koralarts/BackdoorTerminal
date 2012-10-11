@@ -35,6 +35,7 @@ optparse = OptionParser.new do |opts|
 	end
 	opts.on('-r', '--rport PORT', "Port to send the responses to. Default 8001") do |f|
 	        options[:rport] = f
+	end
 end
 
 optparse.parse!
