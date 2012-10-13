@@ -80,11 +80,6 @@ end
 # Listen for attacker
 # ---------------------------------------------------------
 
-#cap = Pcap::Capture.open_live(dev)
-#cap.setfilter('udp dst port ' + port.to_s)
-
-#cap.loop do |pkt|
-
 cap = Capture.new(:iface => dev, :start => true, :filter => 'udp dst port ' + cport.to_s)
 
 cap.stream.each do |pkt|

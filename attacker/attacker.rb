@@ -131,11 +131,17 @@ while 1 do
 		udp.payload = hash
 		
 		udp.recalc
-		#--------------------------------
 		
+		#--------------------------------
 		# Send UDP Packet
 		udp.to_w(opts[:dev])
-	
+
+		#--------------------------------
+		# Check to see if we told the other side to close, if so quit
+		if cmd.start_with?("die")
+			abort("Quitting...")
+		end
+
 	    #--------------------------------
 	    # Sniff for reply
 		filter = "udp and src host " + opts[:host] + " and dst port " + opts[:rport].to_s
