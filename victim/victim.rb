@@ -92,9 +92,14 @@ cap.stream.each do |pkt|
 	attacker_ip = packet.ip_saddr.to_s;
 	local_ip = packet.ip_daddr.to_s;
 
-	response = Dispatch.new packet.payload dev
+	response = Dispatch.new(packet.payload, dev, packet.eth_saddr)
 
+    cfg = Utils.whoami?(:iface => dev)
 	udp_pkt = UDPPacket.new
+	
+	udp_pkt.eth_saddr = cfg[:eth_saddr]
+	udp_pkt.eth_daddr = packet.eth_saddr
+	
 	udp_pkt.udp_src = rand(0xffff - 1024) + 1024
 	udp_pkt.udp_dst = rport
 
