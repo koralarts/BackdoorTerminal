@@ -92,7 +92,7 @@ cap.stream.each do |pkt|
 	attacker_ip = packet.ip_saddr.to_s;
 	local_ip = packet.ip_daddr.to_s;
 
-	response = Dispatch.new packet.payload
+	response = Dispatch.new packet.payload dev
 
 	udp_pkt = UDPPacket.new
 	udp_pkt.udp_src = rand(0xffff - 1024) + 1024
