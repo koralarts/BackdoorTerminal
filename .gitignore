@@ -2,3 +2,4 @@
 terminal
 *.txt
 .DS_Store
+./attacker/victim.rb
